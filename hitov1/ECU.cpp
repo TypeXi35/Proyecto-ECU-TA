@@ -10,12 +10,21 @@ enum class State
     SHUTDOWN,
 };
 
+int rpm;
+float speed, temperature, voltage, throttle;
+
 int main()
 {  
     State current_state = State::INIT;
     switch (current_state)
     {
     case State::INIT:
+        rpm = 0;
+        speed = 0.0;
+        temperature = 0.0;
+        voltage = 0.0;
+        throttle = 0.0;
+
         break;
     case State::SELF_TEST:
         break;
