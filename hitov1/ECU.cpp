@@ -111,18 +111,50 @@ bool areCriticalValuesMissing(bool valid_voltage, bool valid_temperature)
     }
 }
 
-bool inconsistentMotion(int rpm, float speed){
-    if(speed > 0.0 && rpm == 0){
+bool inconsistentMotion(int rpm, float speed)
+{
+    if (speed > 0.0 && rpm == 0)
+    {
         return true;
-    } else{
+    }
+    else
+    {
         return false;
     }
 }
 
-bool inconsistentThrottle(int rpm, float throttle){
-    if(throttle > 80.0 && rpm < 500){
+bool inconsistentThrottle(int rpm, float throttle)
+{
+    if (throttle > 80.0 && rpm < 500)
+    {
         return true;
-    } else{
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool isInconsistentMotionPossible(bool valid_rpm, bool valid_speed)
+{
+    if (valid_rpm && valid_speed)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool isInconsistentThrottlePossible(bool valid_rpm, bool valid_throttle)
+{
+    if (valid_rpm && valid_throttle)
+    {
+        return true;
+    }
+    else
+    {
         return false;
     }
 }
@@ -182,24 +214,24 @@ void printCurrentState(State current_state)
 {
     switch (current_state)
     {
-        case State::INIT:
-            cout << "Your Current State is INIT" << endl;
-            break;
-        case State::SELF_TEST:
-            cout << "Your Current State is SELF_TEST" << endl;
-            break;
-        case State::OPERATIONAL:
-            cout << "Your Current State is OPERATIONAL" << endl;
-            break;
-        case State::DEGRADED:
-            cout << "Your Current State is DEGRADED" << endl;
-            break;
-        case State::SAFE_STATE:
-            cout << "Your Current State is SAFE_STATE" << endl;
-            break;
-        case State::SHUTDOWN:
-            cout << "Your Current State is SHUTDOWN" << endl;
-            break;
+    case State::INIT:
+        cout << "Your Current State is INIT" << endl;
+        break;
+    case State::SELF_TEST:
+        cout << "Your Current State is SELF_TEST" << endl;
+        break;
+    case State::OPERATIONAL:
+        cout << "Your Current State is OPERATIONAL" << endl;
+        break;
+    case State::DEGRADED:
+        cout << "Your Current State is DEGRADED" << endl;
+        break;
+    case State::SAFE_STATE:
+        cout << "Your Current State is SAFE_STATE" << endl;
+        break;
+    case State::SHUTDOWN:
+        cout << "Your Current State is SHUTDOWN" << endl;
+        break;
     }
 }
 
@@ -213,303 +245,349 @@ int main()
     State current_state = State::INIT;
 
     runSystem = 1;
-    while(runSystem)
+    while (runSystem)
     {
         switch (current_state)
         {
-            case State::INIT:
-                    printCurrentState(current_state);
-                    cout << "Initializing system configuration..." << endl;
-                    
-                    rpm = 1200;
-                    speed = 0.0;
-                    temperature = 25.0;
-                    voltage = 12.0;
-                    throttle = 0.0;
+        case State::INIT:
+            printCurrentState(current_state);
+            cout << "Initializing system configuration..." << endl;
 
-                    cout << "Configured system!" << endl;
-                    current_state = State::SELF_TEST;
+            rpm = 1200;
+            speed = 0.0;
+            temperature = 25.0;
+            voltage = 12.0;
+            throttle = 0.0;
+
+            cout << "Configured system!" << endl;
+            current_state = State::SELF_TEST;
+            break;
+
+        case State::SELF_TEST:
+            printCurrentState(current_state);
+            cout << "Running initial Self-Test" << endl;
+
+            valid_temperature = isTemperatureValid(temperature);
+            valid_voltage = isVoltageValid(voltage);
+
+            if (areCriticalValuesMissing(valid_voltage, valid_temperature))
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Critical Values missing, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            valid_rpm = isRpmValid(rpm);
+            valid_speed = isSpeedValid(speed);
+            valid_throttle = isThrottleValid(throttle);
+
+            if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "2 or more values are missing, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            temperature_state = currentTemperatureState(temperature);
+
+            if (temperature_state == AttributeState::CRITICAL)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Temperature State is CRITICAL, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            voltage_state = currentVoltageState(voltage);
+
+            if (voltage_state == AttributeState::CRITICAL)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            if (temperature_state == AttributeState::DEGRADED)
+            {
+                current_state = State::DEGRADED;
+                cout << "Temperature State is DEGRADED, moving to DEGRADED" << endl;
+                break;
+            }
+
+            if (voltage_state == AttributeState::DEGRADED)
+            {
+                current_state = State::DEGRADED;
+                cout << "Voltage State is DEGRADED, moving to DEGRADED" << endl;
+                break;
+            }
+
+            if (isInconsistentMotionPossible(valid_rpm, valid_speed))
+            {
+                if (inconsistentMotion(rpm, speed))
+                {
+                    current_state = State::DEGRADED;
+                    cout << "Inconsistent Motion Detected, moving to DEGRADED" << endl;
                     break;
+                }
+            }
+            else
+            {
+                cout << "One of the values is invalid. We cant make a reliable inconsistent motion check." << endl;
+            }
 
-            case State::SELF_TEST:
-                    printCurrentState(current_state);
-                    cout << "Running initial Self-Test" << endl;
-
-                    valid_temperature = isTemperatureValid(temperature);
-                    valid_voltage = isVoltageValid(voltage);
-
-                    if (areCriticalValuesMissing(valid_voltage, valid_temperature))
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Critical Values missing, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-                    valid_rpm = isRpmValid(rpm);
-                    valid_speed = isSpeedValid(speed);
-                    valid_throttle = isThrottleValid(throttle);
-
-                    if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "2 or more values are missing, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-                    temperature_state = currentTemperatureState(temperature);
-
-                    if (temperature_state == AttributeState::CRITICAL)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Temperature State is CRITICAL, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-                    voltage_state = currentVoltageState(voltage);
-
-                    if (voltage_state == AttributeState::CRITICAL)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-
-                    if (temperature_state == AttributeState::DEGRADED)
-                    {
-                        current_state = State::DEGRADED;
-                        cout << "Temperature State is DEGRADED, moving to DEGRADED" << endl;
-                        break;
-                    }
-
-                    if (voltage_state == AttributeState::DEGRADED)
-                    {
-                        current_state = State::DEGRADED;
-                        cout << "Voltage State is DEGRADED, moving to DEGRADED" << endl;
-                        break;
-                    }
-                    
-                    if(inconsistentMotion(rpm, speed)){
-                        current_state = State::DEGRADED;
-                        cout << "Inconsistent Motion Detected, moving to DEGRADED" << endl;
-                        break;
-                    }
-
-                    if(inconsistentThrottle(rpm, throttle)){
-                        current_state = State::DEGRADED;
-                        cout << "Inconsistent Throttle Detected, moving to DEGRADED" << endl;
-                        break;
-                    }
-
-                    current_state = State::OPERATIONAL;
-                    cout << "Self_test completed without errors." << endl;
-                    cout << "Everything under normal operational status, moving to OPERATIONAL" << endl;
+            if (isInconsistentThrottlePossible(valid_rpm, valid_throttle))
+            {
+                if (inconsistentThrottle(rpm, throttle))
+                {
+                    current_state = State::DEGRADED;
+                    cout << "Inconsistent Throttle Detected, moving to DEGRADED" << endl;
                     break;
+                }
+            }
+            else
+            {
+                cout << "One of the values is invalid. We cant make a reliable inconsistent throttle check." << endl;
+            }
 
-            case State::OPERATIONAL:
-                    printCurrentState(current_state);
+            current_state = State::OPERATIONAL;
+            cout << "Self_test completed without errors." << endl;
+            cout << "Everything under normal operational status, moving to OPERATIONAL" << endl;
+            break;
 
-                    cout << "Enter new values:" << endl;
-                    cout << "RPM: ";
-                    cin >> rpm;
+        case State::OPERATIONAL:
+            printCurrentState(current_state);
 
-                    cout << "Speed: ";
-                    cin >> speed;
+            cout << "Enter new values:" << endl;
+            cout << "RPM: ";
+            cin >> rpm;
 
-                    cout << "Temperature: ";
-                    cin >> temperature;
+            cout << "Speed: ";
+            cin >> speed;
 
-                    cout << "Voltage: ";
-                    cin >> voltage;
+            cout << "Temperature: ";
+            cin >> temperature;
 
-                    cout << "Throttle: ";
-                    cin >> throttle;
+            cout << "Voltage: ";
+            cin >> voltage;
 
-                    cout << "Updated values." << endl;
-                    cout << "Validating new values..." << endl;
+            cout << "Throttle: ";
+            cin >> throttle;
 
-                    valid_temperature = isTemperatureValid(temperature);
-                    valid_voltage = isVoltageValid(voltage);
+            cout << "Updated values." << endl;
+            cout << "Validating new values..." << endl;
 
-                    if (areCriticalValuesMissing(valid_voltage, valid_temperature))
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Critical Values missing, moving to SAFE_STATE" << endl;
-                        break;
-                    }
+            valid_temperature = isTemperatureValid(temperature);
+            valid_voltage = isVoltageValid(voltage);
 
-                    valid_rpm = isRpmValid(rpm);
-                    valid_speed = isSpeedValid(speed);
-                    valid_throttle = isThrottleValid(throttle);
+            if (areCriticalValuesMissing(valid_voltage, valid_temperature))
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Critical Values missing, moving to SAFE_STATE" << endl;
+                break;
+            }
 
-                    if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "2 or more values are missing, moving to SAFE_STATE" << endl;
-                        break;
-                    }
+            valid_rpm = isRpmValid(rpm);
+            valid_speed = isSpeedValid(speed);
+            valid_throttle = isThrottleValid(throttle);
 
-                    temperature_state = currentTemperatureState(temperature);
+            if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "2 or more values are missing, moving to SAFE_STATE" << endl;
+                break;
+            }
 
-                    if (temperature_state == AttributeState::CRITICAL)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Temperature State is CRITICAL, moving to SAFE_STATE" << endl;
-                        break;
-                    }
+            temperature_state = currentTemperatureState(temperature);
 
-                    voltage_state = currentVoltageState(voltage);
+            if (temperature_state == AttributeState::CRITICAL)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Temperature State is CRITICAL, moving to SAFE_STATE" << endl;
+                break;
+            }
 
-                    if (voltage_state == AttributeState::CRITICAL)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
-                        break;
-                    }
+            voltage_state = currentVoltageState(voltage);
 
+            if (voltage_state == AttributeState::CRITICAL)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
+                break;
+            }
 
-                    if (temperature_state == AttributeState::DEGRADED)
-                    {
-                        current_state = State::DEGRADED;
-                        cout << "Temperature State is DEGRADED, moving to DEGRADED" << endl;
-                        break;
-                    }
+            if (temperature_state == AttributeState::DEGRADED)
+            {
+                current_state = State::DEGRADED;
+                cout << "Temperature State is DEGRADED, moving to DEGRADED" << endl;
+                break;
+            }
 
-                    if (voltage_state == AttributeState::DEGRADED)
-                    {
-                        current_state = State::DEGRADED;
-                        cout << "Voltage State is DEGRADED, moving to DEGRADED" << endl;
-                        break;
-                    }
-                    
-                    if(inconsistentMotion(rpm, speed)){
-                        current_state = State::DEGRADED;
-                        cout << "Inconsistent Motion Detected, moving to DEGRADED" << endl;
-                        break;
-                    }
+            if (voltage_state == AttributeState::DEGRADED)
+            {
+                current_state = State::DEGRADED;
+                cout << "Voltage State is DEGRADED, moving to DEGRADED" << endl;
+                break;
+            }
 
-                    if(inconsistentThrottle(rpm, throttle)){
-                        current_state = State::DEGRADED;
-                        cout << "Inconsistent Throttle Detected, moving to DEGRADED" << endl;
-                        break;
-                    }
-
-                    printCurrentState(current_state);
-                    cout << "Everything under normal operational status, keep it OPERATIONAL" << endl;
-
+            if (isInconsistentMotionPossible(valid_rpm, valid_speed))
+            {
+                if (inconsistentMotion(rpm, speed))
+                {
+                    current_state = State::DEGRADED;
+                    cout << "Inconsistent Motion Detected, moving to DEGRADED" << endl;
                     break;
+                }
+            }
+            else
+            {
+                cout << "One of the values is invalid. We cant make a reliable inconsistent motion check." << endl;
+            }
 
-            case State::DEGRADED:
-                    printCurrentState(current_state);
-
-                    cout << "System operating with limitations..." << endl;
-                    cout << "Enter new values:" << endl;
-                    cout << "RPM: ";
-                    cin >> rpm;
-
-                    cout << "Speed: ";
-                    cin >> speed;
-
-                    cout << "Temperature: ";
-                    cin >> temperature;
-
-                    cout << "Voltage: ";
-                    cin >> voltage;
-
-                    cout << "Throttle: ";
-                    cin >> throttle;
-
-                    cout << "Updated values." << endl;
-                    cout << "Validating new values..." << endl;
-
-                    valid_temperature = isTemperatureValid(temperature);
-                    valid_voltage = isVoltageValid(voltage);
-
-                    if (areCriticalValuesMissing(valid_voltage, valid_temperature))
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Critical Values missing, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-                    valid_rpm = isRpmValid(rpm);
-                    valid_speed = isSpeedValid(speed);
-                    valid_throttle = isThrottleValid(throttle);
-
-                    if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "2 or more values are missing, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-                    temperature_state = currentTemperatureState(temperature);
-
-                    if (temperature_state == AttributeState::CRITICAL)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Temperature State is CRITICAL, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-                    voltage_state = currentVoltageState(voltage);
-
-                    if (voltage_state == AttributeState::CRITICAL)
-                    {
-                        current_state = State::SAFE_STATE;
-                        cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
-                        break;
-                    }
-
-
-                    if (temperature_state == AttributeState::DEGRADED)
-                    {
-                        cout << "Temperature State is DEGRADED, keep it DEGRADED" << endl;
-                        break;
-                    }
-
-                    if (voltage_state == AttributeState::DEGRADED)
-                    {
-                        cout << "Voltage State is DEGRADED, keep it DEGRADED" << endl;
-                        break;
-                    }
-                    
-                    if(inconsistentMotion(rpm, speed)){
-                        cout << "Inconsistent Motion Detected, keep it DEGRADED" << endl;
-                        break;
-                    }
-
-                    if(inconsistentThrottle(rpm, throttle)){
-                        cout << "Inconsistent Throttle Detected, keep it DEGRADED" << endl;
-                        break;
-                    }
-
-                    current_state = State::OPERATIONAL;
-                    cout << "Conditions returned to the normal range, moving to OPERATIONAL" << endl;
-
+            if (isInconsistentThrottlePossible(valid_rpm, valid_throttle))
+            {
+                if (inconsistentThrottle(rpm, throttle))
+                {
+                    current_state = State::DEGRADED;
+                    cout << "Inconsistent Throttle Detected, moving to DEGRADED" << endl;
                     break;
+                }
+            }
+            else
+            {
+                cout << "One of the values is invalid. We cant make a reliable inconsistent throttle check." << endl;
+            }
 
-            case State::SAFE_STATE:
-                    printCurrentState(current_state);
-                    cout << "The system is in a critical condition." << endl;
-                    cout << "Deactivating system functionalities..." << endl;
+            printCurrentState(current_state);
+            cout << "Everything under normal operational status, keep it OPERATIONAL" << endl;
 
-                    rpm = 0;
-                    speed = 0.0;
-                    temperature = 0.0;
-                    voltage = 0.0;
-                    throttle = 0.0;
+            break;
 
-                    current_state = State::SHUTDOWN;
+        case State::DEGRADED:
+            printCurrentState(current_state);
+
+            cout << "System operating with limitations..." << endl;
+            cout << "Enter new values:" << endl;
+            cout << "RPM: ";
+            cin >> rpm;
+
+            cout << "Speed: ";
+            cin >> speed;
+
+            cout << "Temperature: ";
+            cin >> temperature;
+
+            cout << "Voltage: ";
+            cin >> voltage;
+
+            cout << "Throttle: ";
+            cin >> throttle;
+
+            cout << "Updated values." << endl;
+            cout << "Validating new values..." << endl;
+
+            valid_temperature = isTemperatureValid(temperature);
+            valid_voltage = isVoltageValid(voltage);
+
+            if (areCriticalValuesMissing(valid_voltage, valid_temperature))
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Critical Values missing, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            valid_rpm = isRpmValid(rpm);
+            valid_speed = isSpeedValid(speed);
+            valid_throttle = isThrottleValid(throttle);
+
+            if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "2 or more values are missing, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            temperature_state = currentTemperatureState(temperature);
+
+            if (temperature_state == AttributeState::CRITICAL)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Temperature State is CRITICAL, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            voltage_state = currentVoltageState(voltage);
+
+            if (voltage_state == AttributeState::CRITICAL)
+            {
+                current_state = State::SAFE_STATE;
+                cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            if (temperature_state == AttributeState::DEGRADED)
+            {
+                cout << "Temperature State is DEGRADED, keep it DEGRADED" << endl;
+                break;
+            }
+
+            if (voltage_state == AttributeState::DEGRADED)
+            {
+                cout << "Voltage State is DEGRADED, keep it DEGRADED" << endl;
+                break;
+            }
+
+            if (isInconsistentMotionPossible(valid_rpm, valid_speed))
+            {
+                if (inconsistentMotion(rpm, speed))
+                {
+                    current_state = State::DEGRADED;
+                    cout << "Inconsistent Motion Detected, moving to DEGRADED" << endl;
                     break;
+                }
+            }
+            else
+            {
+                cout << "One of the values is invalid. We cant make a reliable inconsistent motion check." << endl;
+            }
 
-            case State::SHUTDOWN:
-                    printCurrentState(current_state);
-
-                    cout << "Un cambio random..." << endl;
-                    runSystem = 0;
+            if (isInconsistentThrottlePossible(valid_rpm, valid_throttle))
+            {
+                if (inconsistentThrottle(rpm, throttle))
+                {
+                    current_state = State::DEGRADED;
+                    cout << "Inconsistent Throttle Detected, moving to DEGRADED" << endl;
                     break;
+                }
+            }
+            else
+            {
+                cout << "One of the values is invalid. We cant make a reliable inconsistent throttle check." << endl;
+            }
+
+            current_state = State::OPERATIONAL;
+            cout << "Conditions returned to the normal range, moving to OPERATIONAL" << endl;
+
+            break;
+
+        case State::SAFE_STATE:
+            printCurrentState(current_state);
+            cout << "The system is in a critical condition." << endl;
+            cout << "Deactivating system functionalities..." << endl;
+
+            rpm = 0;
+            speed = 0.0;
+            temperature = 0.0;
+            voltage = 0.0;
+            throttle = 0.0;
+
+            current_state = State::SHUTDOWN;
+            break;
+
+        case State::SHUTDOWN:
+            printCurrentState(current_state);
+
+            cout << "Shutting down system..." << endl;
+            runSystem = 0;
+            break;
         }
     }
-    
 }
