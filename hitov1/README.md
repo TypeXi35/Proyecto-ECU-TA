@@ -152,54 +152,27 @@ La máquina de estados permite tanto la permanencia en un estado como la recuper
 
 ## 4.1 Diagrama de estados
 
-```text
-                         ┌──────────┐
-                         │   INIT   │
-                         └────┬─────┘
-                              │
-                              │ Inicialización completa
-                              ▼
-                     ┌────────────────┐
-                     │   SELF_TEST    │
-                     └───┬────┬────┬──┘
-                         │    │    │
-                    normal│    │    │critical
-                         │    │    │
-                         │    │    └────────────────────┐
-                         │    │                         │
-                    degraded│                         ▼
-                         │    │                  ┌─────────────┐
-                         │    └─────────────────►│ SAFE_STATE  │
-                         │                       └──────┬──────┘
-                         │                              │
-                         ▼                              │
-                  ┌─────────────┐                       │
-                  │ OPERATIONAL │                       │
-                  └───┬─────┬───┘                       │
-                      │     │                           │
-                 normal│     │degraded                  │
-                      │     │                           │
-                      │     ▼                           │
-                      │ ┌─────────────┐                 │
-                      │ │  DEGRADED   │◄────────────────┘
-                      │ └──┬──────┬───┘
-                      │    │      │
-                      │    │      │critical
-                      │    │      └──────────────────► SAFE_STATE
-                      │    │
-                      │    │normal
-                      │    └─────────────────────────► OPERATIONAL
-                      │
-                      └──────────────────────────────► OPERATIONAL
+```mermaid
+stateDiagram-v2
+    [*] --> INIT
+    INIT --> SELF_TEST: inicialización completa
 
-SAFE_STATE
-     │
-     │ Apagado seguro completado
-     ▼
-┌──────────┐
-│ SHUTDOWN │
-└──────────┘
+    SELF_TEST --> OPERATIONAL: normal
+    SELF_TEST --> DEGRADED: degraded
+    SELF_TEST --> SAFE_STATE: critical
+
+    OPERATIONAL --> OPERATIONAL: normal
+    OPERATIONAL --> DEGRADED: degraded
+    OPERATIONAL --> SAFE_STATE: critical
+
+    DEGRADED --> OPERATIONAL: normal
+    DEGRADED --> DEGRADED: degraded
+    DEGRADED --> SAFE_STATE: critical
+
+    SAFE_STATE --> SHUTDOWN: apagado seguro completado
+    SHUTDOWN --> [*]
 ```
+
 
 ### 4.2 Transiciones permitidas
 
@@ -265,7 +238,8 @@ También se establecen:
 * Rangos funcionales utilizados por el Control ECU.
 * Umbrales de aceptación para cambios entre mediciones.
 * Clasificación de señales críticas y normales.
-* Reglas asociadas a señales faltantes o que no sean recibidas.
+* Umbrales de conteo de lecturas inválidas consecutivas para señales normales
+  (ver sección 12).
 
 Una vez terminada la inicialización:
 
@@ -454,6 +428,11 @@ OPERATIONAL
 DEGRADED
 ```
 
+También se considera degradada la condición en que una señal normal (RPM,
+velocidad o acelerador) acumula `INVALID_SIGNALS_TO_DEGRADED` (3) lecturas
+inválidas **consecutivas**, aunque su valor actual esté dentro de rango. El
+contador se reinicia a 0 en cuanto la señal vuelve a ser válida.
+
 ---
 
 ## 7.3 OPERATIONAL → SAFE_STATE
@@ -469,6 +448,9 @@ SAFE_STATE
 ```
 
 Una condición crítica siempre tiene prioridad sobre permanecer en `OPERATIONAL` o pasar a `DEGRADED`.
+
+Un error de tipo de dato al leer una entrada (valor no numérico) también
+fuerza `SAFE_STATE` de inmediato, sin pasar por la evaluación de criticidad.
 
 ---
 
@@ -537,6 +519,13 @@ Ejemplos:
 * Dos señales normales se vuelven inválidas.
 * Una condición funcional pasa a `CRITICAL`.
 * Se detecta una condición físicamente insegura.
+* Una señal normal acumula `INVALID_SIGNALS_TO_SAFE_STATE` (5) lecturas
+  inválidas consecutivas.
+* Error de tipo de dato al leer una entrada (valor no numérico).
+
+Mientras el contador de una señal normal esté entre 3 y 4 lecturas inválidas
+consecutivas (por debajo del umbral de 5), el sistema **permanece en
+`DEGRADED`** en lugar de escalar a `SAFE_STATE`.
 
 ---
 
@@ -630,7 +619,20 @@ Invalid_Normal_Signals >= 2
          SAFE_STATE
 ```
 
-## 11.3 Prioridad general
+## 11.3 Error de tipo de dato en la entrada
+
+Si al leer una señal se recibe un valor que no se puede interpretar como
+número (fallo de `cin`), el sistema pasa inmediatamente a `SAFE_STATE`, con
+la misma prioridad que una señal crítica inválida:
+
+```text
+Entrada no numérica
+        │
+        ▼
+   SAFE_STATE
+```
+
+## 11.4 Prioridad general
 
 La evaluación de condiciones debe seguir conceptualmente este orden:
 
@@ -660,49 +662,49 @@ Esto garantiza que una condición crítica **nunca sea degradada por error a `DE
 
 ---
 
-# 12. Señales no recibidas
+# 12. Señales inválidas de forma persistente
 
-Se deben establecer casos especiales para situaciones en las que una señal esperada no sea recibida.
+El sistema no implementa temporizadores ni un reloj: no existe el concepto de
+"tiempo máximo sin recibir una actualización". En su lugar, el Control ECU
+lleva un **conteo de lecturas inválidas consecutivas** por cada señal normal
+(RPM, velocidad, acelerador). Una señal crítica (temperatura, voltaje) no usa
+este mecanismo: si es inválida en una sola lectura, el sistema pasa
+inmediatamente a `SAFE_STATE` (ver sección 3.1).
 
-Una señal ausente no debe tratarse automáticamente como un valor válido.
+Una señal normal inválida no se trata automáticamente como si estuviera
+ausente ni se descarta; simplemente incrementa su contador. En cuanto la
+señal vuelve a ser válida, el contador se reinicia a `0`.
 
-Se debe distinguir entre:
+Umbrales definidos (`INVALID_SIGNALS_TO_DEGRADED` / `INVALID_SIGNALS_TO_SAFE_STATE`):
 
 ```text
-┌────────────────────────────┐
-│ Estado de una señal        │
-├────────────────────────────┤
-│ VÁLIDA                     │
-│ INVÁLIDA                   │
-│ AUSENTE / TIMEOUT          │
-└────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│ Contador de lecturas inválidas consecutivas (señal normal)│
+├───────────────────────────────────────────────────────────┤
+│  0 - 2   → sin efecto en el estado                         │
+│  ≥ 3     → dispara transición a DEGRADED (desde OPERATIONAL)│
+│  ≥ 5     → dispara transición a SAFE_STATE (desde DEGRADED) │
+└───────────────────────────────────────────────────────────┘
 ```
-
-Para cada señal se deberá definir:
-
-* Tiempo máximo permitido sin recibir una actualización.
-* Si una ausencia temporal puede tolerarse.
-* Cuánto tiempo puede permanecer el sistema en `DEGRADED`.
-* Cuándo una señal ausente debe considerarse `INVALID`.
-* Qué sucede si una señal crítica deja de recibirse.
-* Qué sucede si una o varias señales normales dejan de recibirse.
 
 ### Ejemplo
 
 ```text
-No se recibe señal
+Lectura de señal normal inválida
        │
        ▼
-¿Timeout excedido?
+Incrementar contador
+       │
+       ▼
+¿Contador >= umbral?
    │          │
   NO         SÍ
    │          │
    ▼          ▼
-Continuar   INVALID
-            │
-            ▼
-       Evaluar reglas
-       de seguridad
+Continuar   Evaluar reglas
+en el       de seguridad
+estado      (DEGRADED / SAFE_STATE
+actual      según el estado actual)
 ```
 
 ---

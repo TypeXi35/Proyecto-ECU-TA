@@ -638,7 +638,7 @@ int main()
             }
 
             cout << "Speed: ";
-            if (valid_rpm)
+            if (valid_speed)
             {
                 old_speed = speed;
                 cin >> speed;
@@ -646,7 +646,7 @@ int main()
             else
             {
                 cin >> speed;
-                old_rpm = speed;
+                old_speed = speed;
             }
             if (isInputValid(cin.fail()))
             {
