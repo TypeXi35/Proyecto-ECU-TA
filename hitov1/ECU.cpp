@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 
 using std::cin;
 using std::cout;
@@ -176,6 +177,18 @@ int areNormalValuesMissing(bool valid_rpm, bool valid_speed, bool valid_throttle
     }
     cout << invalid_count << " Values are invalid" << endl;
     return invalid_count;
+}
+
+bool isInputValid(bool fail)
+{
+    if (fail)
+    {
+        cin.clear();
+        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        cout << "Error: Invalid input data type" << std::endl;
+        return true;
+    }
+    return false;
 }
 
 AttributeState currentTemperatureState(float temperature)
@@ -359,18 +372,48 @@ int main()
             cout << "Enter new values:" << endl;
             cout << "RPM: ";
             cin >> rpm;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Speed: ";
             cin >> speed;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Temperature: ";
             cin >> temperature;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Voltage: ";
             cin >> voltage;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Throttle: ";
             cin >> throttle;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Updated values." << endl;
             cout << "Validating new values..." << endl;
@@ -468,18 +511,48 @@ int main()
             cout << "Enter new values:" << endl;
             cout << "RPM: ";
             cin >> rpm;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Speed: ";
             cin >> speed;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Temperature: ";
             cin >> temperature;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Voltage: ";
             cin >> voltage;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Throttle: ";
             cin >> throttle;
+            if (isInputValid(cin.fail()))
+            {
+                cout << "Changing state to SAFE_STATE" << endl;
+                current_state = State::SAFE_STATE;
+                break;
+            }
 
             cout << "Updated values." << endl;
             cout << "Validating new values..." << endl;
