@@ -506,7 +506,7 @@ int main()
             case State::SHUTDOWN:
                     printCurrentState(current_state);
 
-                    cout << "Shutting down system..." << endl;
+                    cout << "Un cambio random..." << endl;
                     runSystem = 0;
                     break;
         }
