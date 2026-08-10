@@ -257,6 +257,7 @@ int main()
     int old_rpm;
     float old_speed, old_temperature, old_voltage, old_throttle;
     bool valid_rpm, valid_speed, valid_temperature, valid_voltage, valid_throttle;
+    int invalid_rpm_count = 0, invalid_speed_count = 0, invalid_temperature_count = 0, invalid_voltage_count = 0, invalid_throttle_count = 0;
     AttributeState voltage_state, temperature_state;
 
     State current_state = State::INIT;
@@ -302,6 +303,25 @@ int main()
             valid_rpm = isRpmValid(rpm, old_rpm);
             valid_speed = isSpeedValid(speed, old_speed);
             valid_throttle = isThrottleValid(throttle);
+
+            if (valid_rpm){
+                invalid_rpm_count = 0;
+            }
+            else{
+                invalid_rpm_count++;
+            }
+            if (valid_speed){
+                invalid_speed_count = 0;
+            }
+            else{
+                invalid_speed_count++;
+            }
+            if (valid_throttle){
+                invalid_throttle_count = 0;
+            }
+            else{
+                invalid_throttle_count++;
+            }
 
             if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
             {
@@ -477,6 +497,27 @@ int main()
             valid_speed = isSpeedValid(speed, old_speed);
             valid_throttle = isThrottleValid(throttle);
 
+            
+            if (valid_rpm){
+                invalid_rpm_count = 0;
+            }
+            else{
+                invalid_rpm_count++;
+            }
+            if (valid_speed){
+                invalid_speed_count = 0;
+            }
+            else{
+                invalid_speed_count++;
+            }
+            if (valid_throttle){
+                invalid_throttle_count = 0;
+            }
+            else{
+                invalid_throttle_count++;
+            }
+
+
             if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
             {
                 current_state = State::SAFE_STATE;
@@ -499,6 +540,24 @@ int main()
             {
                 current_state = State::SAFE_STATE;
                 cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            if(invalid_rpm_count >= 3){
+                current_state = State::DEGRADED;
+                cout << "RPM has had an invalid value for more than 3 iteration sensor might be compromised, moving to DEGRADED" << endl;
+                break;
+            }
+
+            if(invalid_speed_count >= 3){
+                current_state = State::DEGRADED;
+                cout <<"Speed has had an invalid value for more than 3 iteration sensor might be compromised, moving to DEGRADED" << endl;
+                break;
+            }
+
+            if(invalid_throttle_count >= 3){
+                current_state = State::DEGRADED;
+                cout << "Throttle has had an invalid value for more than 3 iteration sensor might be compromised, moving to DEGRADED" << endl;
                 break;
             }
 
@@ -656,6 +715,43 @@ int main()
             valid_speed = isSpeedValid(speed, old_speed);
             valid_throttle = isThrottleValid(throttle);
 
+            if (valid_rpm){
+                invalid_rpm_count = 0;
+            }
+            else{
+                invalid_rpm_count++;
+            }
+            if (valid_speed){
+                invalid_speed_count = 0;
+            }
+            else{
+                invalid_speed_count++;
+            }
+            if (valid_throttle){
+                invalid_throttle_count = 0;
+            }
+            else{
+                invalid_throttle_count++;
+            }
+
+            if(invalid_rpm_count >= 5){
+                current_state = State::SAFE_STATE;
+                cout << "RPM has had an invalid value for more than 5 iteration sensor might be compromised, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            if(invalid_speed_count >= 5){
+                current_state = State::SAFE_STATE;
+                cout <<"Speed has had an invalid value for more than 5 iteration sensor might be compromised, moving to SAFE_STATE" << endl;
+                break;
+            }
+
+            if(invalid_throttle_count >= 5){
+                current_state = State::SAFE_STATE;
+                cout << "Throttle has had an invalid value for more than 5 iteration sensor might be compromised, moving to SAFE_STATE" << endl;
+                break;
+            }
+
             if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
             {
                 current_state = State::SAFE_STATE;
@@ -680,6 +776,7 @@ int main()
                 cout << "Voltage State is CRITICAL, moving to SAFE_STATE" << endl;
                 break;
             }
+\
 
             if (temperature_state == AttributeState::DEGRADED)
             {
@@ -693,12 +790,27 @@ int main()
                 break;
             }
 
+
+            if(invalid_rpm_count >= 3){
+                cout << "RPM has had an invalid value for more than 3 iteration sensor might be compromised, keep it DEGRADED";
+                break;
+            }
+
+            if(invalid_speed_count >= 3){
+                cout <<"Speed has had an invalid value for more than 3 iteration sensor might be compromised, keep it DEGRADED";
+                break;
+            }
+
+            if(invalid_throttle_count >= 3){
+                cout << "Throttle has had an invalid value for more than 3 iteration sensor might be compromised, keep it DEGRADED";
+                break;
+            }
+
             if (isInconsistentMotionPossible(valid_rpm, valid_speed))
             {
                 if (inconsistentMotion(rpm, speed))
                 {
-                    current_state = State::DEGRADED;
-                    cout << "Inconsistent Motion Detected, moving to DEGRADED" << endl;
+                    cout << "Inconsistent Motion Detected, keep it DEGRADED" << endl;
                     break;
                 }
             }
@@ -712,7 +824,7 @@ int main()
                 if (inconsistentThrottle(rpm, throttle))
                 {
                     current_state = State::DEGRADED;
-                    cout << "Inconsistent Throttle Detected, moving to DEGRADED" << endl;
+                    cout << "Inconsistent Throttle Detected, keep it DEGRADED" << endl;
                     break;
                 }
             }
