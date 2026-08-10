@@ -51,6 +51,9 @@ const float DEGRADED_VOLTAGE = 11.5;
 const float CRITICAL_TEMPERATURE = 115.0;
 const float CRITICAL_VOLTAGE = 10.5;
 
+const int INVALID_SIGNALS_TO_DEGRADED = 3;
+const int INVALID_SIGNALS_TO_SAFE_STATE = 5;
+
 bool isRpmValid(int rpm, int old_rpm)
 {
     if ((rpm >= MIN_RPM && rpm <= MAX_RPM) && (abs((rpm - old_rpm)) <= MAX_RPM_JUMP))
@@ -543,19 +546,19 @@ int main()
                 break;
             }
 
-            if(invalid_rpm_count >= 3){
+            if(invalid_rpm_count >= INVALID_SIGNALS_TO_DEGRADED){
                 current_state = State::DEGRADED;
                 cout << "RPM has had an invalid value for more than 3 iteration sensor might be compromised, moving to DEGRADED" << endl;
                 break;
             }
 
-            if(invalid_speed_count >= 3){
+            if(invalid_speed_count >= INVALID_SIGNALS_TO_DEGRADED){
                 current_state = State::DEGRADED;
                 cout <<"Speed has had an invalid value for more than 3 iteration sensor might be compromised, moving to DEGRADED" << endl;
                 break;
             }
 
-            if(invalid_throttle_count >= 3){
+            if(invalid_throttle_count >= INVALID_SIGNALS_TO_DEGRADED){
                 current_state = State::DEGRADED;
                 cout << "Throttle has had an invalid value for more than 3 iteration sensor might be compromised, moving to DEGRADED" << endl;
                 break;
@@ -734,19 +737,19 @@ int main()
                 invalid_throttle_count++;
             }
 
-            if(invalid_rpm_count >= 5){
+            if(invalid_rpm_count >= INVALID_SIGNALS_TO_SAFE_STATE){
                 current_state = State::SAFE_STATE;
                 cout << "RPM has had an invalid value for more than 5 iteration sensor might be compromised, moving to SAFE_STATE" << endl;
                 break;
             }
 
-            if(invalid_speed_count >= 5){
+            if(invalid_speed_count >= INVALID_SIGNALS_TO_SAFE_STATE){
                 current_state = State::SAFE_STATE;
                 cout <<"Speed has had an invalid value for more than 5 iteration sensor might be compromised, moving to SAFE_STATE" << endl;
                 break;
             }
 
-            if(invalid_throttle_count >= 5){
+            if(invalid_throttle_count >= INVALID_SIGNALS_TO_SAFE_STATE){
                 current_state = State::SAFE_STATE;
                 cout << "Throttle has had an invalid value for more than 5 iteration sensor might be compromised, moving to SAFE_STATE" << endl;
                 break;
@@ -791,17 +794,17 @@ int main()
             }
 
 
-            if(invalid_rpm_count >= 3){
+            if(invalid_rpm_count >= INVALID_SIGNALS_TO_DEGRADED){
                 cout << "RPM has had an invalid value for more than 3 iteration sensor might be compromised, keep it DEGRADED";
                 break;
             }
 
-            if(invalid_speed_count >= 3){
+            if(invalid_speed_count >= INVALID_SIGNALS_TO_DEGRADED){
                 cout <<"Speed has had an invalid value for more than 3 iteration sensor might be compromised, keep it DEGRADED";
                 break;
             }
 
-            if(invalid_throttle_count >= 3){
+            if(invalid_throttle_count >= INVALID_SIGNALS_TO_DEGRADED){
                 cout << "Throttle has had an invalid value for more than 3 iteration sensor might be compromised, keep it DEGRADED";
                 break;
             }
