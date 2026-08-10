@@ -1,6 +1,8 @@
 #include <iostream>
 #include <limits>
+#include <cmath>
 
+using std::abs;
 using std::cin;
 using std::cout;
 using std::endl;
@@ -49,18 +51,18 @@ const float DEGRADED_VOLTAGE = 11.5;
 const float CRITICAL_TEMPERATURE = 115.0;
 const float CRITICAL_VOLTAGE = 10.5;
 
-bool isRpmValid(int rpm)
+bool isRpmValid(int rpm, int old_rpm)
 {
-    if (rpm >= MIN_RPM && rpm <= MAX_RPM)
+    if ((rpm >= MIN_RPM && rpm <= MAX_RPM) && (abs((rpm - old_rpm)) <= MAX_RPM_JUMP))
     {
         cout << "Valid RPM" << endl;
         return true;
     }
     return false;
 }
-bool isSpeedValid(float speed)
+bool isSpeedValid(float speed, float old_speed)
 {
-    if (speed >= MIN_SPEED && speed <= MAX_SPEED)
+    if ((speed >= MIN_SPEED && speed <= MAX_SPEED) && (abs((speed - old_speed)) <= MAX_SPEED_JUMP))
     {
         cout << "Valid Speed" << endl;
         return true;
@@ -68,9 +70,9 @@ bool isSpeedValid(float speed)
     return false;
 }
 
-bool isTemperatureValid(int temperature)
+bool isTemperatureValid(float temperature, float old_temperature)
 {
-    if (temperature >= MIN_TEMPERATURE && temperature <= MAX_TEMPERATURE)
+    if ((temperature >= MIN_TEMPERATURE && temperature <= MAX_TEMPERATURE) && (abs((temperature - old_temperature)) <= MAX_TEMPERATURE_JUMP))
     {
         cout << "Valid Temperature" << endl;
         return true;
@@ -78,9 +80,9 @@ bool isTemperatureValid(int temperature)
     return false;
 }
 
-bool isVoltageValid(int voltage)
+bool isVoltageValid(float voltage, float old_voltage)
 {
-    if (voltage >= MIN_VOLTAGE && voltage <= MAX_VOLTAGE)
+    if (voltage >= MIN_VOLTAGE && voltage <= MAX_VOLTAGE && (abs((voltage - old_voltage)) <= MAX_VOLTAGE_JUMP))
     {
         cout << "Valid Voltage" << endl;
         return true;
@@ -88,7 +90,7 @@ bool isVoltageValid(int voltage)
     return false;
 }
 
-bool isThrottleValid(int throttle)
+bool isThrottleValid(float throttle)
 {
     if (throttle >= MIN_THROTTLE && throttle <= MAX_THROTTLE)
     {
@@ -252,6 +254,8 @@ int main()
 {
     int rpm, runSystem;
     float speed, temperature, voltage, throttle;
+    int old_rpm;
+    float old_speed, old_temperature, old_voltage, old_throttle;
     bool valid_rpm, valid_speed, valid_temperature, valid_voltage, valid_throttle;
     AttributeState voltage_state, temperature_state;
 
@@ -272,6 +276,11 @@ int main()
             voltage = 12.0;
             throttle = 0.0;
 
+            old_rpm = rpm;
+            old_speed = speed;
+            old_temperature = temperature;
+            old_voltage = voltage;
+
             cout << "Configured system!" << endl;
             current_state = State::SELF_TEST;
             break;
@@ -280,8 +289,8 @@ int main()
             printCurrentState(current_state);
             cout << "Running initial Self-Test" << endl;
 
-            valid_temperature = isTemperatureValid(temperature);
-            valid_voltage = isVoltageValid(voltage);
+            valid_temperature = isTemperatureValid(temperature, old_temperature);
+            valid_voltage = isVoltageValid(voltage, old_voltage);
 
             if (areCriticalValuesMissing(valid_voltage, valid_temperature))
             {
@@ -290,8 +299,8 @@ int main()
                 break;
             }
 
-            valid_rpm = isRpmValid(rpm);
-            valid_speed = isSpeedValid(speed);
+            valid_rpm = isRpmValid(rpm, old_rpm);
+            valid_speed = isSpeedValid(speed, old_speed);
             valid_throttle = isThrottleValid(throttle);
 
             if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
@@ -371,7 +380,16 @@ int main()
 
             cout << "Enter new values:" << endl;
             cout << "RPM: ";
-            cin >> rpm;
+            if (valid_rpm)
+            {
+                old_rpm = rpm;
+                cin >> rpm;
+            }
+            else
+            {
+                cin >> rpm;
+                old_rpm = rpm;
+            }
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -380,7 +398,16 @@ int main()
             }
 
             cout << "Speed: ";
-            cin >> speed;
+            if (valid_speed)
+            {
+                old_speed = speed;
+                cin >> speed;
+            }
+            else
+            {
+                cin >> speed;
+                old_speed = speed;
+            }
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -389,7 +416,16 @@ int main()
             }
 
             cout << "Temperature: ";
-            cin >> temperature;
+            if (valid_temperature)
+            {
+                old_temperature = temperature;
+                cin >> temperature;
+            }
+            else
+            {
+                cin >> temperature;
+                old_temperature = temperature;
+            }
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -398,7 +434,16 @@ int main()
             }
 
             cout << "Voltage: ";
-            cin >> voltage;
+            if (valid_voltage)
+            {
+                old_voltage = voltage;
+                cin >> voltage;
+            }
+            else
+            {
+                cin >> voltage;
+                old_voltage = voltage;
+            }
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -418,24 +463,24 @@ int main()
             cout << "Updated values." << endl;
             cout << "Validating new values..." << endl;
 
-            valid_temperature = isTemperatureValid(temperature);
-            valid_voltage = isVoltageValid(voltage);
+            valid_temperature = isTemperatureValid(temperature, old_temperature);
+            valid_voltage = isVoltageValid(voltage, old_voltage);
 
             if (areCriticalValuesMissing(valid_voltage, valid_temperature))
             {
                 current_state = State::SAFE_STATE;
-                cout << "Critical Values missing, moving to SAFE_STATE" << endl;
+                cout << "Critical Values are Invalid, moving to SAFE_STATE" << endl;
                 break;
             }
 
-            valid_rpm = isRpmValid(rpm);
-            valid_speed = isSpeedValid(speed);
+            valid_rpm = isRpmValid(rpm, old_rpm);
+            valid_speed = isSpeedValid(speed, old_speed);
             valid_throttle = isThrottleValid(throttle);
 
             if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
             {
                 current_state = State::SAFE_STATE;
-                cout << "2 or more values are missing, moving to SAFE_STATE" << endl;
+                cout << "2 or more values are Invalid, moving to SAFE_STATE" << endl;
                 break;
             }
 
@@ -509,8 +554,20 @@ int main()
 
             cout << "System operating with limitations..." << endl;
             cout << "Enter new values:" << endl;
+
             cout << "RPM: ";
-            cin >> rpm;
+
+            if (valid_rpm)
+            {
+                old_rpm = rpm;
+                cin >> rpm;
+            }
+            else
+            {
+                cin >> rpm;
+                old_rpm = rpm;
+            }
+
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -519,7 +576,16 @@ int main()
             }
 
             cout << "Speed: ";
-            cin >> speed;
+            if (valid_rpm)
+            {
+                old_speed = speed;
+                cin >> speed;
+            }
+            else
+            {
+                cin >> speed;
+                old_rpm = speed;
+            }
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -527,8 +593,18 @@ int main()
                 break;
             }
 
+            old_temperature = temperature;
             cout << "Temperature: ";
-            cin >> temperature;
+            if (valid_temperature)
+            {
+                old_temperature = temperature;
+                cin >> temperature;
+            }
+            else
+            {
+                cin >> temperature;
+                old_temperature = temperature;
+            }
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -537,7 +613,16 @@ int main()
             }
 
             cout << "Voltage: ";
-            cin >> voltage;
+            if (valid_voltage)
+            {
+                old_voltage = voltage;
+                cin >> voltage;
+            }
+            else
+            {
+                cin >> voltage;
+                old_voltage = voltage;
+            }
             if (isInputValid(cin.fail()))
             {
                 cout << "Changing state to SAFE_STATE" << endl;
@@ -557,8 +642,8 @@ int main()
             cout << "Updated values." << endl;
             cout << "Validating new values..." << endl;
 
-            valid_temperature = isTemperatureValid(temperature);
-            valid_voltage = isVoltageValid(voltage);
+            valid_temperature = isTemperatureValid(temperature, old_temperature);
+            valid_voltage = isVoltageValid(voltage, old_voltage);
 
             if (areCriticalValuesMissing(valid_voltage, valid_temperature))
             {
@@ -567,8 +652,8 @@ int main()
                 break;
             }
 
-            valid_rpm = isRpmValid(rpm);
-            valid_speed = isSpeedValid(speed);
+            valid_rpm = isRpmValid(rpm, old_rpm);
+            valid_speed = isSpeedValid(speed, old_speed);
             valid_throttle = isThrottleValid(throttle);
 
             if (areNormalValuesMissing(valid_rpm, valid_speed, valid_throttle) >= 2)
